@@ -17,11 +17,11 @@ jobs:
     steps:
       # PASO 1: Descargar el código
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # PASO 2: Instalar Node.js
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -59,8 +59,8 @@ jobs:
       
       # PASO 7: Ejecutar tests
       - name: Run tests
-        run: npm test 2>/dev/null || echo "⚠️ Tests not yet configured"
-        continue-on-error: true
+        run: npm test
+        continue-on-error: false
       
       # PASO 8: Generar reporte
       - name: Generate test report
@@ -73,10 +73,10 @@ jobs:
           echo "Status: ✅ Pipeline executed successfully"
         if: always()
       
-      # PASO 9: Guardar artefactos
+      # PASO 9: Guardar artefactos (ACTUALIZADO A v4)
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: qa-pipeline-artifacts
           path: |
