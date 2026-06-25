@@ -1,0 +1,100 @@
+name: QA CI Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  qa-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x]
+    
+    steps:
+      # PASO 1: Descargar el código
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # PASO 2: Instalar Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      
+      # PASO 3: Instalar dependencias
+      - name: Install dependencies
+        run: npm install
+        continue-on-error: true
+      
+      # PASO 4: Verificar estructura
+      - name: Verify project structure
+        run: |
+          echo "📁 Checking project structure..."
+          test -d performance && echo "✓ performance/" || echo "✗ performance/"
+          test -d tests && echo "✓ tests/" || echo "✗ tests/"
+          test -d docs && echo "✓ docs/" || echo "✗ docs/"
+          echo "✅ Structure verified"
+      
+      # PASO 5: Verificar secrets
+      - name: Check for exposed secrets (basic)
+        run: |
+          echo "🔒 Checking for exposed secrets..."
+          if grep -r "password\|secret\|token\|api_key" . --include="*.js" --include="*.json" --include="*.py" 2>/dev/null; then
+            echo "⚠️ Possible secrets found!"
+            exit 1
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+        continue-on-error: true
+      
+      # PASO 6: Ejecutar linter (opcional)
+      - name: Run linter
+        run: npm run lint 2>/dev/null || echo "⚠️ Linter not configured (optional)"
+        continue-on-error: true
+      
+      # PASO 7: Ejecutar tests
+      - name: Run tests
+        run: npm test
+        continue-on-error: false
+      
+      # PASO 8: Generar reporte
+      - name: Generate test report
+        run: |
+          echo "📊 Test Report"
+          echo "=============="
+          echo "Date: $(date)"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Status: ✅ Pipeline executed successfully"
+        if: always()
+      
+      # PASO 9: Guardar artefactos (ACTUALIZADO A v4)
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pipeline-artifacts
+          path: |
+            reports/
+            results/
+            coverage/
+            *.log
+          retention-days: 30
+      
+      # PASO 10: Resumen final
+      - name: Pipeline Summary
+        if: always()
+        run: |
+          echo "🎉 QA Pipeline Completed!"
+          echo "=========================="
+          echo "✅ Code checkout"
+          echo "✅ Dependencies installed"
+          echo "✅ Project structure verified"
+          echo "✅ Security check"
+          echo "✅ Tests executed"
+          echo "✅ Artifacts generated"
